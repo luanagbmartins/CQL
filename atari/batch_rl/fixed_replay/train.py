@@ -26,8 +26,7 @@ import json
 import os
 
 
-from absl import app
-from absl import flags
+import argparse
 
 from batch_rl.fixed_replay import run_experiment
 from batch_rl.fixed_replay.agents import dqn_agent
@@ -40,58 +39,74 @@ import tensorflow.compat.v1 as tf
 
 from dopamine.discrete_domains import train as base_train
 
-flags.DEFINE_string('agent_name', 'dqn', 'Name of the agent.')
-flags.DEFINE_string('replay_dir', None, 'Directory from which to load the '
-                    'replay data')
-flags.DEFINE_string('init_checkpoint_dir', None, 'Directory from which to load '
-                    'the initial checkpoint before training starts.')
 
-FLAGS = flags.FLAGS
+def create_agent(
+    sess,
+    environment,
+    replay_data_dir,
+    agent_name,
+    init_checkpoint_dir,
+    summary_writer=None,
+):
+    """Creates a DQN agent.
 
+    Args:
+      sess: A `tf.Session`object  for running associated ops.
+      environment: An Atari 2600 environment.
+      replay_data_dir: Directory to which log the replay buffers periodically.
+      summary_writer: A Tensorflow summary writer to pass to the agent
+        for in-agent training statistics in Tensorboard.
 
-def create_agent(sess, environment, replay_data_dir, summary_writer=None):
-  """Creates a DQN agent.
+    Returns:
+      A DQN agent with metrics.
+    """
+    if agent_name == "dqn":
+        agent = dqn_agent.FixedReplayDQNAgent
+    elif agent_name == "c51":
+        agent = rainbow_agent.FixedReplayRainbowAgent
+    elif agent_name == "quantile":
+        agent = quantile_agent.FixedReplayQuantileAgent
+    elif agent_name == "multi_head_dqn":
+        agent = multi_head_dqn_agent.FixedReplayMultiHeadDQNAgent
+    else:
+        raise ValueError("{} is not a valid agent name".format(agent_name))
 
-  Args:
-    sess: A `tf.Session`object  for running associated ops.
-    environment: An Atari 2600 environment.
-    replay_data_dir: Directory to which log the replay buffers periodically.
-    summary_writer: A Tensorflow summary writer to pass to the agent
-      for in-agent training statistics in Tensorboard.
-
-  Returns:
-    A DQN agent with metrics.
-  """
-  if FLAGS.agent_name == 'dqn':
-    agent = dqn_agent.FixedReplayDQNAgent
-  elif FLAGS.agent_name == 'c51':
-    agent = rainbow_agent.FixedReplayRainbowAgent
-  elif FLAGS.agent_name == 'quantile':
-    agent = quantile_agent.FixedReplayQuantileAgent
-  elif FLAGS.agent_name == 'multi_head_dqn':
-    agent = multi_head_dqn_agent.FixedReplayMultiHeadDQNAgent
-  else:
-    raise ValueError('{} is not a valid agent name'.format(FLAGS.agent_name))
-
-  return agent(sess, num_actions=environment.action_space.n,
-               replay_data_dir=replay_data_dir, summary_writer=summary_writer,
-               init_checkpoint_dir=FLAGS.init_checkpoint_dir)
-
-
-
-
-def main(unused_argv):
-  tf.logging.set_verbosity(tf.logging.INFO)
-  base_run_experiment.load_gin_configs(FLAGS.gin_files, FLAGS.gin_bindings)
-  # replay_data_dir = FLAGS.replay_dir
-  replay_data_dir = os.path.join(FLAGS.replay_dir, 'replay_logs')
-  create_agent_fn = functools.partial(
-      create_agent, replay_data_dir=replay_data_dir)
-  runner = run_experiment.FixedReplayRunner(FLAGS.base_dir, create_agent_fn)
-  runner.run_experiment()
+    return agent(
+        sess,
+        num_actions=environment.action_space.n,
+        replay_data_dir=replay_data_dir,
+        summary_writer=summary_writer,
+        init_checkpoint_dir=init_checkpoint_dir,
+    )
 
 
-if __name__ == '__main__':
-  flags.mark_flag_as_required('replay_dir')
-  flags.mark_flag_as_required('base_dir')
-  app.run(main)
+def main(config):
+    tf.logging.set_verbosity(tf.logging.INFO)
+    base_run_experiment.load_gin_configs(config["gin-files"], config["gin-bindings"])
+    replay_data_dir = os.path.join(config["replay-dir"], "replay_logs")
+    create_agent_fn = functools.partial(
+        create_agent,
+        replay_data_dir=replay_data_dir,
+        agent_name=config["agent-name"],
+        init_checkpoint_dir=config["init-checkpoint-dir"],
+    )
+    runner = run_experiment.FixedReplayRunner(config["base-dir"], create_agent_fn)
+    runner.run_experiment()
+
+
+if __name__ == "__main__":
+    config = {
+        "base-dir": "/tmp/batch_rl",
+        "replay-dir": "/home/luanamartins/data/RL/CQL/atari-replay-datasets/dqn/Pong/1",
+        "agent-name": "quantile",
+        "gin-files": [
+            "/home/luanamartins/data/RL/CQL/atari/batch_rl/fixed_replay/configs/quantile.gin"
+        ],
+        "gin-bindings": [
+            "FixedReplayRunner.num_iterations=1000",
+            'atari_lib.create_atari_environment.game_name="Pong"',
+            "FixedReplayQuantileAgent.minq_weight=1.0",
+        ],
+        "init-checkpoint-dir": "/home/luanamartins/data/RL/CQL/atari/",
+    }
+    main(config)
