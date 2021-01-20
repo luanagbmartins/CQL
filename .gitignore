@@ -1,3 +1,5 @@
+atari-replay-datasets/
+
 # Un-ignore .keep files, so base folder structure gets commited
 !*.keep
 
