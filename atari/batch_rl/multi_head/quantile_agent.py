@@ -95,6 +95,10 @@ class QuantileAgent(rainbow_agent.RainbowAgent):
             written. Lower values will result in slower training.
         """
         self.kappa = kappa
+        
+        
+        self.minq_weight = minq_weight
+        print("min Q weight (QR-DQN): ", self.minq_weight)
 
         super(QuantileAgent, self).__init__(
             sess=sess,
@@ -117,8 +121,6 @@ class QuantileAgent(rainbow_agent.RainbowAgent):
             summary_writing_frequency=summary_writing_frequency,
             # minq_weight=minq_weight,
         )
-        self.minq_weight = minq_weight
-        print("min Q weight (QR-DQN): ", self.minq_weight)
 
     def _create_network(self, name):
         """Builds a Quantile ConvNet.
@@ -244,7 +246,7 @@ class QuantileAgent(rainbow_agent.RainbowAgent):
 
         min_q_loss = negative_sampling - dataset_expec
 
-        print("MIN Q WEIGHT: ", self.min_q_weight)
+        print("MIN Q WEIGHT: ", self.minq_weight)
 
         with tf.control_dependencies([update_priorities_op]):
             if self.summary_writer is not None:
@@ -253,5 +255,5 @@ class QuantileAgent(rainbow_agent.RainbowAgent):
                     tf.summary.scalar("minQLoss", tf.reduce_mean(min_q_loss))
                     tf.summary.scalar("Q_predictions", tf.reduce_mean(replay_chosen_q))
 
-            min_q_loss = min_q_loss * self.min_q_weight
+            min_q_loss = min_q_loss * self.minq_weight
             return self.optimizer.minimize(tf.reduce_mean(loss) + min_q_loss), loss
