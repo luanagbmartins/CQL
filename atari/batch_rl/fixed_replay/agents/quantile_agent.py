@@ -29,69 +29,83 @@ import tensorflow.compat.v1 as tf
 
 @gin.configurable
 class FixedReplayQuantileAgent(quantile_agent.QuantileAgent):
-  """An implementation of the DQN agent with fixed replay buffer(s)."""
+    """An implementation of the DQN agent with fixed replay buffer(s)."""
 
-  def __init__(self, sess, num_actions, replay_data_dir, replay_suffix=None,
-               init_checkpoint_dir=None, **kwargs):
-    """Initializes the agent and constructs the components of its graph.
+    def __init__(
+        self,
+        sess,
+        num_actions,
+        observation_shape,
+        observation_dtype,
+        replay_data_dir,
+        replay_suffix=None,
+        init_checkpoint_dir=None,
+        **kwargs
+    ):
+        """Initializes the agent and constructs the components of its graph.
 
-    Args:
-      sess: tf.Session, for executing ops.
-      num_actions: int, number of actions the agent can take at any state.
-      replay_data_dir: str, log Directory from which to load the replay buffer.
-      replay_suffix: int, If not None, then only load the replay buffer
-        corresponding to the specific suffix in data directory.
-      init_checkpoint_dir: str, directory from which initial checkpoint before
-        training is loaded if there doesn't exist any checkpoint in the current
-        agent directory. If None, no initial checkpoint is loaded.
-      **kwargs: Arbitrary keyword arguments.
-    """
-    assert replay_data_dir is not None
-    # Set replay_log_dir before calling parent's initializer
-    tf.logging.info(
-        'Creating FixedReplayAgent with replay directory: %s', replay_data_dir)
-    tf.logging.info('\t init_checkpoint_dir: %s', init_checkpoint_dir)
-    tf.logging.info('\t replay_suffix %s', replay_suffix)
-    self._replay_data_dir = replay_data_dir
-    self._replay_suffix = replay_suffix
-    if init_checkpoint_dir is not None:
-      self._init_checkpoint_dir = os.path.join(
-          init_checkpoint_dir, 'checkpoints')
-    else:
-      self._init_checkpoint_dir = None
-    
-    print ('Created Quantile Agent....')
-    super(FixedReplayQuantileAgent, self).__init__(
-        sess, num_actions, **kwargs)
+        Args:
+          sess: tf.Session, for executing ops.
+          num_actions: int, number of actions the agent can take at any state.
+          replay_data_dir: str, log Directory from which to load the replay buffer.
+          replay_suffix: int, If not None, then only load the replay buffer
+            corresponding to the specific suffix in data directory.
+          init_checkpoint_dir: str, directory from which initial checkpoint before
+            training is loaded if there doesn't exist any checkpoint in the current
+            agent directory. If None, no initial checkpoint is loaded.
+          **kwargs: Arbitrary keyword arguments.
+        """
 
-  def step(self, reward, observation):
-    """Records the most recent transition and returns the agent's next action.
+        assert replay_data_dir is not None
+        # Set replay_log_dir before calling parent's initializer
+        tf.logging.info(
+            "Creating FixedReplayAgent with replay directory: %s", replay_data_dir
+        )
+        tf.logging.info("\t init_checkpoint_dir: %s", init_checkpoint_dir)
+        tf.logging.info("\t replay_suffix %s", replay_suffix)
+        self._replay_data_dir = replay_data_dir
+        self._replay_suffix = replay_suffix
+        if init_checkpoint_dir is not None:
+            self._init_checkpoint_dir = os.path.join(init_checkpoint_dir, "checkpoints")
+        else:
+            self._init_checkpoint_dir = None
 
-    Args:
-      reward: float, the reward received from the agent's most recent action.
-      observation: numpy array, the most recent observation.
+        print("Created Quantile Agent....")
+        super(FixedReplayQuantileAgent, self).__init__(
+            sess, num_actions, observation_shape, observation_dtype, **kwargs
+        )
 
-    Returns:
-      int, the selected action.
-    """
-    self._record_observation(observation)
-    self.action = self._select_action()
-    return self.action
+        print("----------", self.observation_shape)
+        print("----------", self.observation_dtype)
 
-  def end_episode(self, reward):
-    assert self.eval_mode, 'Eval mode is not set to be True.'
-    super(FixedReplayQuantileAgent, self).end_episode(reward)
+    def step(self, reward, observation):
+        """Records the most recent transition and returns the agent's next action.
 
-  def _build_replay_buffer(self, use_staging):
-    """Creates the replay buffer used by the agent."""
+        Args:
+          reward: float, the reward received from the agent's most recent action.
+          observation: numpy array, the most recent observation.
 
-    return fixed_replay_buffer.WrappedFixedReplayBuffer(
-        data_dir=self._replay_data_dir,
-        replay_suffix=self._replay_suffix,
-        observation_shape=self.observation_shape,
-        stack_size=self.stack_size,
-        use_staging=use_staging,
-        update_horizon=self.update_horizon,
-        gamma=self.gamma,
-        observation_dtype=self.observation_dtype.as_numpy_dtype)
+        Returns:
+          int, the selected action.
+        """
+        self._record_observation(observation)
+        self.action = self._select_action()
+        return self.action
 
+    def end_episode(self, reward):
+        assert self.eval_mode, "Eval mode is not set to be True."
+        super(FixedReplayQuantileAgent, self).end_episode(reward)
+
+    def _build_replay_buffer(self, use_staging):
+        """Creates the replay buffer used by the agent."""
+
+        return fixed_replay_buffer.WrappedFixedReplayBuffer(
+            data_dir=self._replay_data_dir,
+            replay_suffix=self._replay_suffix,
+            observation_shape=self.observation_shape,
+            stack_size=self.stack_size,
+            use_staging=use_staging,
+            update_horizon=self.update_horizon,
+            gamma=self.gamma,
+            observation_dtype=self.observation_dtype,
+        )
