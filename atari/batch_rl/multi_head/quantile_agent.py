@@ -23,7 +23,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from batch_rl.multi_head import atari_helpers
+from batch_rl.multi_head import helpers
 from dopamine.agents.dqn import dqn_agent
 from dopamine.agents.rainbow import rainbow_agent
 import gin
@@ -38,8 +38,10 @@ class QuantileAgent(rainbow_agent.RainbowAgent):
         self,
         sess,
         num_actions,
+        observation_shape,
+        observation_dtype,
         kappa=1.0,
-        network=atari_helpers.QuantileNetwork,
+        network=helpers.QuantileNetwork,
         num_atoms=200,
         gamma=0.99,
         update_horizon=1,
@@ -95,14 +97,15 @@ class QuantileAgent(rainbow_agent.RainbowAgent):
             written. Lower values will result in slower training.
         """
         self.kappa = kappa
-        
-        
+
         self.minq_weight = minq_weight
         print("min Q weight (QR-DQN): ", self.minq_weight)
 
         super(QuantileAgent, self).__init__(
             sess=sess,
             num_actions=num_actions,
+            observation_shape=observation_shape,
+            observation_dtype=observation_dtype,
             network=network,
             num_atoms=num_atoms,
             gamma=gamma,

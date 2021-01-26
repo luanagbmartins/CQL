@@ -25,9 +25,11 @@ import functools
 import json
 import os
 
-
+import ast
 import argparse
+import numpy as np
 
+from batch_rl.fixed_replay.environments import ACPulse
 from batch_rl.fixed_replay import run_experiment
 from batch_rl.fixed_replay.agents import dqn_agent
 from batch_rl.fixed_replay.agents import multi_head_dqn_agent
@@ -74,39 +76,70 @@ def create_agent(
     return agent(
         sess,
         num_actions=environment.action_space.n,
+        observation_shape=environment.observation_shape,
+        observation_dtype=environment.observation_dtype,
         replay_data_dir=replay_data_dir,
         summary_writer=summary_writer,
         init_checkpoint_dir=init_checkpoint_dir,
     )
 
 
-def main(config):
+def create_environment(
+    observation_shape=(80,),
+    observation_dtype=np.float32,
+):
+    env = ACPulse(observation_shape, observation_dtype)
+    return env
+
+
+def main(configs):
     tf.logging.set_verbosity(tf.logging.INFO)
-    base_run_experiment.load_gin_configs(config["gin-files"], config["gin-bindings"])
-    replay_data_dir = os.path.join(config["replay-dir"], "replay_logs")
+    base_run_experiment.load_gin_configs(configs.gin_files, configs.gin_bindings)
+    replay_data_dir = os.path.join(configs.replay_dir, "replay_logs")
     create_agent_fn = functools.partial(
         create_agent,
         replay_data_dir=replay_data_dir,
-        agent_name=config["agent-name"],
-        init_checkpoint_dir=config["init-checkpoint-dir"],
+        agent_name=configs.agent_name,
+        init_checkpoint_dir=configs.init_checkpoint_dir,
     )
-    runner = run_experiment.FixedReplayRunner(config["base-dir"], create_agent_fn)
+    create_environment_fn = functools.partial(create_environment)
+    runner = run_experiment.FixedReplayRunner(
+        configs.base_dir, create_agent_fn, create_environment_fn=create_environment_fn
+    )
     runner.run_experiment()
 
 
 if __name__ == "__main__":
-    config = {
-        "base-dir": "/tmp/batch_rl",
-        "replay-dir": "/home/luanamartins/data/RL/CQL/atari-replay-datasets/dqn/Pong/1",
-        "agent-name": "quantile",
-        "gin-files": [
-            "/home/luanamartins/data/RL/CQL/atari/batch_rl/fixed_replay/configs/quantile.gin"
-        ],
-        "gin-bindings": [
-            "FixedReplayRunner.num_iterations=1000",
-            'atari_lib.create_atari_environment.game_name="Pong"',
-            "FixedReplayQuantileAgent.minq_weight=1.0",
-        ],
-        "init-checkpoint-dir": "/home/luanamartins/data/RL/CQL/atari/",
-    }
-    main(config)
+    parser = argparse.ArgumentParser(description="CQL")
+    parser.add_argument(
+        "--replay-dir",
+        type=str,
+        default=os.path.join(os.path.realpath("."), "cql-dataset"),
+    )
+    parser.add_argument(
+        "--base-dir", type=str, default=os.path.join(os.path.realpath("."), "runs")
+    )
+    parser.add_argument("--agent-name", type=str, default="quantile")
+    parser.add_argument(
+        "--gin-files",
+        type=str,
+        default=str(
+            [
+                os.path.join(
+                    os.path.realpath("."), "batch_rl/fixed_replay/configs/quantile.gin"
+                )
+            ]
+        ),
+    )
+    parser.add_argument("--gin-bindings", type=str, default="[]")
+    parser.add_argument(
+        "--init-checkpoint-dir",
+        type=str,
+        default=os.path.join(os.path.realpath("."), "runs"),
+    )
+
+    args = parser.parse_args()
+    args.gin_files = ast.literal_eval(args.gin_files)
+    args.gin_bindings = ast.literal_eval(args.gin_bindings)
+
+    main(args)
