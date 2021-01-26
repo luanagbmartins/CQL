@@ -114,7 +114,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--replay-dir",
         type=str,
-        default=os.path.join(os.path.realpath("."), "cql-dataset"),
+        default=os.path.join(os.path.realpath("."), "cql-dataset/v5_scoremax_dataset_cql"),
     )
     parser.add_argument(
         "--base-dir", type=str, default=os.path.join(os.path.realpath("."), "runs")

@@ -53,7 +53,7 @@ class FixedReplayBuffer(object):
 
         # For 1% experiments, we load 10000 sized buffers
         self._args = list(self._args)
-        self._args[2] = 1000
+        self._args[2] = 10000
         self._args = tuple(self._args)
 
         self._kwargs = kwargs
@@ -69,7 +69,7 @@ class FixedReplayBuffer(object):
                 # self._load_and_save_buffers(num_load=2, num_buffers=50)
 
                 # For 1% experiments, set num_buffers=50
-                self._load_replay_buffers(num_buffers=1)
+                self._load_replay_buffers(num_buffers=8)
 
                 # For first 20M samples
                 # self._load_replay_buffers_initial(num_load=5, num_buffers=5)

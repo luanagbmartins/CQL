@@ -26,11 +26,11 @@ tf.train.AdamOptimizer.epsilon = 0.0003125
 
 FixedReplayRunner.num_iterations = 200
 FixedReplayRunner.training_steps = 250000
-FixedReplayRunner.evaluation_steps = 125000
+FixedReplayRunner.evaluation_steps = 0
 FixedReplayRunner.max_steps_per_episode = 27000
 FixedReplayRunner.clip_rewards = False
 
 WrappedFixedReplayBuffer.replay_capacity = 1000000
-WrappedFixedReplayBuffer.batch_size = 32
+WrappedFixedReplayBuffer.batch_size = 256
 
 
