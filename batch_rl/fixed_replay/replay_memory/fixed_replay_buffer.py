@@ -51,7 +51,7 @@ class FixedReplayBuffer(object):
         """
         self._args = args
 
-        # For 1% experiments, we load 10000 sized buffers
+        # For 10% experiments, we load 10000 sized buffers
         self._args = list(self._args)
         self._args[2] = 10000
         self._args = tuple(self._args)

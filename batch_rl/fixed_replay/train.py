@@ -106,6 +106,15 @@ def main(configs):
     runner = run_experiment.FixedReplayRunner(
         configs.base_dir, create_agent_fn, create_environment_fn=create_environment_fn
     )
+
+    dataset_path = os.path.join(
+        os.path.realpath("."), "data/processed/v5_dataset/test_dataset_users/"
+    )
+    chkpt_path = os.path.join(
+        os.path.realpath("."), "models/reward_pred_v0_model/release/80_input"
+    )
+    runner.set_offline_evaluation(dataset_path, chkpt_path)
+
     runner.run_experiment()
 
 
@@ -114,7 +123,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--replay-dir",
         type=str,
-        default=os.path.join(os.path.realpath("."), "cql-dataset/v5_scoremax_dataset_cql"),
+        default=os.path.join(
+            os.path.realpath("."), "cql-dataset/v5_scoremax_dataset_cql"
+        ),
     )
     parser.add_argument(
         "--base-dir", type=str, default=os.path.join(os.path.realpath("."), "runs")
