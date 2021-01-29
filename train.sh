@@ -2,7 +2,7 @@ mkdir -p cql-dataset/v5_scoremax_dataset_cql/
 gsutil -m rsync -r gs://ac-rl-artifacts/data/processed/cql-dataset/v5_scoremax_dataset_cql cql-dataset/v5_scoremax_dataset_cql
 
 mkdir -p data/processed/v5_dataset/test_dataset_users/
-gsutil -m rsync -r gs://ac-rl-artifacts/data/processed/v5_dataset/test_dataset_users/ data/processed/v5_dataset/test_dataset_users/
+gsutil -m rsync -r gs://ac-rl-artifacts/data/processed/v5_dataset/scores_max/test_dataset_users/ data/processed/v5_dataset/test_dataset_users/
 
 mkdir -p models/reward_pred_v0_model/release/80_input/
 gsutil -m rsync -r gs://ac-rl-artifacts/models/reward_pred_v0_model/release/80_input/ models/reward_pred_v0_model/release/80_input/
