@@ -25,9 +25,11 @@ import time
 import torch
 import pandas as pd
 import numpy as np
+
 from statistics import mean
 from ray.rllib.offline.json_reader import JsonReader
 from batch_rl.fixed_replay.reward_predictor import RewardPredictor
+from batch_rl.fixed_replay.is_estimator import ImportanceSamplingEstimator
 
 from dopamine.discrete_domains import checkpointer
 from dopamine.discrete_domains import iteration_statistics
@@ -100,44 +102,17 @@ class FixedReplayRunner(run_experiment.Runner):
             self._agent._replay.memory.reload_buffer(num_buffers=5)
         # pylint: enable=protected-access
         self._run_train_phase()
-
-        # num_episodes_eval, average_reward_eval = self._run_eval_phase(statistics)
-
-        # self._save_tensorboard_summaries(
-        #     iteration, num_episodes_eval, average_reward_eval
-        # )
-
-        offline_evaluation(iteration)
+        self.offline_evaluation(iteration)
 
         return statistics.data_lists
-
-    # def _save_tensorboard_summaries(
-    #     self, iteration, num_episodes_eval, average_reward_eval
-    # ):
-    #     """Save statistics as tensorboard summaries.
-
-    #     Args:
-    #       iteration: int, The current iteration number.
-    #       num_episodes_eval: int, number of evaluation episodes run.
-    #       average_reward_eval: float, The average evaluation reward.
-    #     """
-    #     summary = tf.Summary(
-    #         value=[
-    #             tf.Summary.Value(
-    #                 tag="Eval/NumEpisodes", simple_value=num_episodes_eval
-    #             ),
-    #             tf.Summary.Value(
-    #                 tag="Eval/AverageReturns", simple_value=average_reward_eval
-    #             ),
-    #         ]
-    #     )
-    #     self._summary_writer.add_summary(summary, iteration)
 
     def set_offline_evaluation(self, dataset_path, chkpt_path):
         # Get validation dataset
         self.dataset_path = dataset_path
         input_size = self._environment.observation_shape[0]
+
         self.predictor = RewardPredictor(input_size, os.path.abspath(chkpt_path))
+        self.is_estimator = ImportanceSamplingEstimator()
 
     def offline_evaluation(self, iteration):
         self._agent.eval_mode = True
@@ -149,29 +124,31 @@ class FixedReplayRunner(run_experiment.Runner):
         ]
 
         actions = []
-        estimation_eps = {
+        estimation = {
             "dm/score": [],
             "dm/pred_reward_mean": [],
             "dm/pred_reward_total": [],
+            "is/V_prev": [],
+            "is/V_step_IS": [],
+            "is/V_gain_est": [],
         }
         for n_eps in range(len(validation_dataset[0])):
             reader = JsonReader(validation_dataset[0])
             batch = reader.next()
-            estimation = {
-                "dm/score": [],
-                "dm/pred_reward_mean": [],
-                "dm/pred_reward_total": [],
-            }
             for episode in batch.split_by_episode():
                 action = []
                 action_probs = []
                 for i in range(len(episode["eps_id"])):
-                    action.append(
-                        self._agent.step(episode["rewards"][i], episode["obs"][i])
+                    _action, _action_prob = self._agent.step(
+                        episode["rewards"][i], episode["obs"][i]
                     )
-                    action_probs.append(1.0)
+                    action.append(_action)
+                    action_probs.append(_action_prob)
 
-                actions.extend(action)
+                is_estimation = self.is_estimator.estimate(
+                    episode, action_probs, 0.1330001
+                )
+
                 action = np.array([action])
                 action_probs = np.array([action_probs])
 
@@ -188,19 +165,19 @@ class FixedReplayRunner(run_experiment.Runner):
                 scores["pred_reward_mean"] = scores_raw.mean()
                 scores["pred_reward_total"] = scores_raw.sum()
 
+                # DM Estimation ------------------------
                 estimation["dm/score"].append(scores["score"])
                 estimation["dm/pred_reward_mean"].append(scores["pred_reward_mean"])
                 estimation["dm/pred_reward_total"].append(scores["pred_reward_total"])
 
-            estimation_eps["dm/score"].append(mean(estimation["dm/score"]))
-            estimation_eps["dm/pred_reward_mean"].append(
-                mean(estimation["dm/pred_reward_mean"])
-            )
-            estimation_eps["dm/pred_reward_total"].append(
-                mean(estimation["dm/pred_reward_total"])
-            )
+                # IS Estimation -----------------------
+                estimation["is/V_prev"].append(is_estimation["V_prev"])
+                estimation["is/V_step_IS"].append(is_estimation["V_step_IS"])
+                estimation["is/V_gain_est"].append(["V_gain_est"])
 
-        est_mean = pd.DataFrame.from_dict(estimation_eps).mean(axis=0)
+                actions.extend(action)
+
+        est_mean = pd.DataFrame.from_dict(estimation).mean(axis=0)
 
         summary = tf.Summary(
             value=[
@@ -214,6 +191,17 @@ class FixedReplayRunner(run_experiment.Runner):
                 tf.Summary.Value(
                     tag="Eval/DM/pred_reward_total",
                     simple_value=est_mean["dm/pred_reward_total"],
+                ),
+                tf.Summary.Value(
+                    tag="Eval/is/V_prev", simple_value=est_mean["is/V_prev"]
+                ),
+                tf.Summary.Value(
+                    tag="Eval/DM/is/V_step_IS",
+                    simple_value=est_mean["is/V_step_IS"],
+                ),
+                tf.Summary.Value(
+                    tag="Eval/DM/is/V_gain_est",
+                    simple_value=est_mean["is/V_gain_est"],
                 ),
             ]
         )

@@ -23,6 +23,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import random
+
 from batch_rl.multi_head import helpers
 from dopamine.agents.dqn import dqn_agent
 from dopamine.agents.rainbow import rainbow_agent
@@ -260,3 +262,54 @@ class QuantileAgent(rainbow_agent.RainbowAgent):
 
             min_q_loss = min_q_loss * self.minq_weight
             return self.optimizer.minimize(tf.reduce_mean(loss) + min_q_loss), loss
+
+    def _select_action(self):
+        """Select an action from the set of available actions.
+
+        Chooses an action randomly with probability self._calculate_epsilon(), and
+        otherwise acts greedily according to the current Q-value estimates.
+
+        Returns:
+           int, the selected action.
+        """
+        if self.eval_mode:
+            epsilon = self.epsilon_eval
+        else:
+            epsilon = self.epsilon_fn(
+                self.epsilon_decay_period,
+                self.training_steps,
+                self.min_replay_history,
+                self.epsilon_train,
+            )
+        if random.random() <= epsilon:
+            # Choose a random action with probability epsilon.
+            return random.randint(0, self.num_actions - 1), epsilon
+        else:
+            # Choose the action with highest Q-value at the current state.
+            return (
+                self._sess.run(self._q_argmax, {self.state_ph: self.state}),
+                1 - epsilon,
+            )
+
+    def step(self, reward, observation):
+        """Records the most recent transition and returns the agent's next action.
+
+        We store the observation of the last time step since we want to store it
+        with the reward.
+
+        Args:
+          reward: float, the reward received from the agent's most recent action.
+          observation: numpy array, the most recent observation.
+
+        Returns:
+          int, the selected action.
+        """
+        self._last_observation = self._observation
+        self._record_observation(observation)
+
+        if not self.eval_mode:
+            self._store_transition(self._last_observation, self.action, reward, False)
+            self._train_step()
+
+        self.action, action_prob = self._select_action()
+        return self.action, action_prob
