@@ -196,11 +196,11 @@ class FixedReplayRunner(run_experiment.Runner):
                     tag="Eval/is/V_prev", simple_value=est_mean["is/V_prev"]
                 ),
                 tf.Summary.Value(
-                    tag="Eval/DM/is/V_step_IS",
+                    tag="Eval/is/V_step_IS",
                     simple_value=est_mean["is/V_step_IS"],
                 ),
                 tf.Summary.Value(
-                    tag="Eval/DM/is/V_gain_est",
+                    tag="Eval/is/V_gain_est",
                     simple_value=est_mean["is/V_gain_est"],
                 ),
             ]
