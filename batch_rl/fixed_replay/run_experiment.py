@@ -203,6 +203,10 @@ class FixedReplayRunner(run_experiment.Runner):
                     tag="Eval/is/V_gain_est",
                     simple_value=est_mean["is/V_gain_est"],
                 ),
+                tf.Summary.Value(
+                    tag="Eval/actions_prob",
+                    simple_value=float(actions.count(1)) / len(actions),
+                ),
             ]
         )
         self._summary_writer.add_summary(summary, iteration)
