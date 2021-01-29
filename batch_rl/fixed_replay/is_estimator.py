@@ -6,7 +6,7 @@ class ImportanceSamplingEstimator:
     def estimate(self, batch, action_prob, reward_shift):
         rewards = batch["rewards"]
         old_prob = batch["action_prob"]
-        new_prob = new_prob
+        new_prob = action_prob
 
         # calculate importance ratios
         p = []
@@ -21,8 +21,8 @@ class ImportanceSamplingEstimator:
         V_prev, V_step_IS = 0.0, 0.0
         for t in range(batch.count):
             reward = rewards[t] + reward_shift
-            V_prev += reward * self.gamma ** t
-            V_step_IS += p[t] * reward * self.gamma ** t
+            V_prev += reward * 0.99 ** t
+            V_step_IS += p[t] * reward * 0.99 ** t
 
         if batch.count == 1:
             V_prev = rewards[0] + reward_shift
