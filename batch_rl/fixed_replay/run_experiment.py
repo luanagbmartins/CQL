@@ -122,6 +122,22 @@ class FixedReplayRunner(run_experiment.Runner):
             for f in os.listdir(self.dataset_path)
             if os.path.isfile(os.path.join(self.dataset_path, f))
         ]
+        
+        rewards = []
+        for n_eps in range(len(dataset)):
+            reader = JsonReader(dataset[n_eps])
+
+            with open(dataset[n_eps], "r") as f:
+                sb = f.readlines()
+
+            for _ in range(len(sb)):
+                n = reader.next()
+                batch = reader.next()
+                for episode in batch.split_by_episode():
+                    for r in episode["rewards"]:
+                        rewards.append(r)
+                        
+        rewards_shift = round(min(rewards), 5)
 
         actions = []
         estimation = {
@@ -146,9 +162,10 @@ class FixedReplayRunner(run_experiment.Runner):
                     action_probs.append(_action_prob)
 
                 is_estimation = self.is_estimator.estimate(
-                    episode, action_probs, 0.1330001
+                    episode, action_probs, rewards_shift
                 )
 
+                actions.extend(action)
                 action = np.array([action])
                 action_probs = np.array([action_probs])
 
@@ -173,9 +190,7 @@ class FixedReplayRunner(run_experiment.Runner):
                 # IS Estimation -----------------------
                 estimation["is/V_prev"].append(is_estimation["V_prev"])
                 estimation["is/V_step_IS"].append(is_estimation["V_step_IS"])
-                estimation["is/V_gain_est"].append(["V_gain_est"])
-
-                actions.extend(action)
+                estimation["is/V_gain_est"].append(is_estimation["V_gain_est"])
 
         est_mean = pd.DataFrame.from_dict(estimation).mean(axis=0)
 
