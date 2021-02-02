@@ -122,12 +122,13 @@ class FixedReplayRunner(run_experiment.Runner):
             for f in os.listdir(self.dataset_path)
             if os.path.isfile(os.path.join(self.dataset_path, f))
         ]
+        validation_dataset = sorted(validation_dataset)
         
         rewards = []
-        for n_eps in range(len(dataset)):
-            reader = JsonReader(dataset[n_eps])
+        for n_eps in range(len(validation_dataset)):
+            reader = JsonReader(validation_dataset[n_eps])
 
-            with open(dataset[n_eps], "r") as f:
+            with open(validation_dataset[n_eps], "r") as f:
                 sb = f.readlines()
 
             for _ in range(len(sb)):
@@ -137,7 +138,7 @@ class FixedReplayRunner(run_experiment.Runner):
                     for r in episode["rewards"]:
                         rewards.append(r)
                         
-        rewards_shift = round(min(rewards), 5)
+        rewards_shift = round(min(rewards), 5) * -1 if round(min(rewards), 5) < 0 else round(min(rewards), 5)
 
         actions = []
         estimation = {
@@ -148,8 +149,8 @@ class FixedReplayRunner(run_experiment.Runner):
             "is/V_step_IS": [],
             "is/V_gain_est": [],
         }
-        for n_eps in range(len(validation_dataset[0])):
-            reader = JsonReader(validation_dataset[0])
+        for n_eps in range(len(validation_dataset)):
+            reader = JsonReader(validation_dataset[n_eps])
             batch = reader.next()
             for episode in batch.split_by_episode():
                 action = []

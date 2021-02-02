@@ -69,7 +69,7 @@ class FixedReplayBuffer(object):
                 # self._load_and_save_buffers(num_load=2, num_buffers=50)
 
                 # For 1% experiments, set num_buffers=50
-                self._load_replay_buffers(num_buffers=8)
+                self._load_replay_buffers(num_buffers=10)
 
                 # For first 20M samples
                 # self._load_replay_buffers_initial(num_load=5, num_buffers=5)
