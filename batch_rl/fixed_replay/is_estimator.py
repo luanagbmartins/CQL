@@ -24,10 +24,6 @@ class ImportanceSamplingEstimator:
             V_prev += reward * 0.99 ** t
             V_step_IS += p[t] * reward * 0.99 ** t
 
-        if batch.count == 1:
-            V_prev = rewards[0] + reward_shift
-            V_step_IS = (new_prob[0] / old_prob[0]) * V_prev
-
         estimation = {
             "V_prev": V_prev,
             "V_step_IS": V_step_IS,

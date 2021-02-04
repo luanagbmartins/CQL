@@ -9,4 +9,4 @@ gsutil -m rsync -r gs://ac-rl-artifacts/models/reward_pred_v0_model/release/80_i
 
 # For 1% data, use minq_weight=4.0 and for 10% data, use minq_weight=1.0.
 python -m batch_rl.fixed_replay.train \
---gin-bindings "['FixedReplayRunner.num_iterations=1000', 'FixedReplayQuantileAgent.minq_weight=4.0']"
+--gin-bindings "['FixedReplayRunner.num_iterations=1000', 'FixedReplayQuantileAgent.minq_weight=4.0', 'FixedReplayRunner.training_steps=125000']"

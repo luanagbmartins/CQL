@@ -124,7 +124,7 @@ if __name__ == "__main__":
         "--replay-dir",
         type=str,
         default=os.path.join(
-            os.path.realpath("."), "cql-dataset/v5_scoremax_dataset_cql"
+            os.path.realpath("."), "cql-dataset/v5_scoremax_validation_cql"
         ),
     )
     parser.add_argument(
