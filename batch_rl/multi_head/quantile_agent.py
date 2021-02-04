@@ -24,6 +24,7 @@ from __future__ import division
 from __future__ import print_function
 
 import random
+import numpy as np
 
 from batch_rl.multi_head import helpers
 from dopamine.agents.dqn import dqn_agent
@@ -281,15 +282,19 @@ class QuantileAgent(rainbow_agent.RainbowAgent):
                 self.min_replay_history,
                 self.epsilon_train,
             )
+
+        actions_prob = (
+            np.ones(self.num_actions, dtype=float) * epsilon / self.num_actions
+        )
+        best_action = self._sess.run(self._q_argmax, {self.state_ph: self.state})
+        actions_prob[best_action] += 1 - epsilon
+
         if random.random() <= epsilon:
             # Choose a random action with probability epsilon.
-            return random.randint(0, self.num_actions - 1), epsilon
+            return random.randint(0, self.num_actions - 1), actions_prob
         else:
             # Choose the action with highest Q-value at the current state.
-            return (
-                self._sess.run(self._q_argmax, {self.state_ph: self.state}),
-                1 - epsilon,
-            )
+            return best_action, actions_prob
 
     def step(self, reward, observation):
         """Records the most recent transition and returns the agent's next action.

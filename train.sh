@@ -1,5 +1,5 @@
-mkdir -p cql-dataset/v5_scoremax_dataset_cql/
-gsutil -m rsync -r gs://ac-rl-artifacts/data/processed/cql-dataset/v5_scoremax_dataset_cql cql-dataset/v5_scoremax_dataset_cql
+mkdir -p cql-dataset/v5_scoremax_validation_cql/
+gsutil -m rsync -r gs://ac-rl-artifacts/data/processed/cql-dataset/v5_scoremax_validation_cql cql-dataset/v5_scoremax_validation_cql
 
 mkdir -p data/processed/v5_dataset/test_dataset_users/
 gsutil -m rsync -r gs://ac-rl-artifacts/data/processed/v5_dataset/test_dataset_users/ data/processed/v5_dataset/test_dataset_users/

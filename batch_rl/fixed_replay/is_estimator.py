@@ -3,10 +3,10 @@ class ImportanceSamplingEstimator:
 
     Step-wise IS estimator described in https://arxiv.org/pdf/1511.03722.pdf"""
 
-    def estimate(self, batch, action_prob, reward_shift):
+    def estimate(self, batch, actions_prob, reward_shift):
         rewards = batch["rewards"]
         old_prob = batch["action_prob"]
-        new_prob = action_prob
+        new_prob = actions_prob
 
         # calculate importance ratios
         p = []
@@ -15,7 +15,8 @@ class ImportanceSamplingEstimator:
                 pt_prev = 1.0
             else:
                 pt_prev = p[t - 1]
-            p.append(pt_prev * new_prob[t] / old_prob[t])
+
+            p.append(pt_prev * new_prob[t][batch["actions"][t]] / old_prob[t])
 
         # calculate stepwise IS estimate
         V_prev, V_step_IS = 0.0, 0.0

@@ -123,7 +123,7 @@ class FixedReplayRunner(run_experiment.Runner):
             if os.path.isfile(os.path.join(self.dataset_path, f))
         ]
         validation_dataset = sorted(validation_dataset)
-        
+
         rewards = []
         for n_eps in range(len(validation_dataset)):
             reader = JsonReader(validation_dataset[n_eps])
@@ -137,8 +137,12 @@ class FixedReplayRunner(run_experiment.Runner):
                 for episode in batch.split_by_episode():
                     for r in episode["rewards"]:
                         rewards.append(r)
-                        
-        rewards_shift = round(min(rewards), 5) * -1 if round(min(rewards), 5) < 0 else round(min(rewards), 5)
+
+        rewards_shift = (
+            round(min(rewards), 5) * -1
+            if round(min(rewards), 5) < 0
+            else round(min(rewards), 5)
+        )
 
         actions = []
         estimation = {
@@ -154,21 +158,23 @@ class FixedReplayRunner(run_experiment.Runner):
             batch = reader.next()
             for episode in batch.split_by_episode():
                 action = []
-                action_probs = []
+                selected_action_prob = []
+                all_actions_prob = []
                 for i in range(len(episode["eps_id"])):
                     _action, _action_prob = self._agent.step(
                         episode["rewards"][i], episode["obs"][i]
                     )
                     action.append(_action)
-                    action_probs.append(_action_prob)
+                    selected_action_prob.append(_action_prob[_action])
+                    all_actions_prob.append(_action_prob)
 
                 is_estimation = self.is_estimator.estimate(
-                    episode, action_probs, rewards_shift
+                    episode, all_actions_prob, rewards_shift
                 )
 
                 actions.extend(action)
                 action = np.array([action])
-                action_probs = np.array([action_probs])
+                action_prob = np.array([selected_action_prob])
 
                 obs = torch.Tensor(
                     np.concatenate(
@@ -179,7 +185,7 @@ class FixedReplayRunner(run_experiment.Runner):
                 # actions are usually [1,0,1,0] so the goal is to make actions like this: [[1],[0],[1]]
                 scores_raw = self.predictor.predict(obs).detach().numpy()
                 scores = {}
-                scores["score"] = (scores_raw * action_probs).mean()
+                scores["score"] = (scores_raw * action_prob).mean()
                 scores["pred_reward_mean"] = scores_raw.mean()
                 scores["pred_reward_total"] = scores_raw.sum()
 
